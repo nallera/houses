@@ -5,6 +5,10 @@ import (
 	"houses/internal/house/adapter/repository"
 	"houses/internal/house/app"
 	"houses/server"
+	"io"
+	"net/http"
+	"os"
+	"strings"
 )
 
 func main() {
@@ -15,7 +19,7 @@ func main() {
 
 	// request pages concurrently until success
 
-	houses, err := houseService.GetHouses(13, 2)
+	houses, err := houseService.GetHouses(10, 2)
 	if err != nil {
 		println(fmt.Sprintf("error: %+v", err))
 	}
@@ -25,4 +29,13 @@ func main() {
 	}
 
 	// concurrently download the photos
+
+	fileUrl := houses[0].PhotoURL
+	urlSplit := strings.Split(fileUrl, "/")
+	fileName := urlSplit[len(urlSplit)-1]
+	out, err := os.Create(fileName)
+	defer out.Close()
+	resp, err := http.Get(fileUrl)
+	defer resp.Body.Close()
+	_, err = io.Copy(out, resp.Body)
 }

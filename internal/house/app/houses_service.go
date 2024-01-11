@@ -7,7 +7,7 @@ import (
 )
 
 type HouseService interface {
-	GetHouses(number, pages int) ([]*house.House, error)
+	GetHouses(numberOfHouses, numberOfPages int) ([]*house.House, error)
 }
 
 func NewHouseService(houseRestRepository house.Repository) HouseService {
@@ -20,11 +20,11 @@ type houseService struct {
 	HouseRestRepository house.Repository
 }
 
-func (hs *houseService) GetHouses(number, pages int) ([]*house.House, error) {
-	perPage := int(math.Ceil(float64(number) / float64(pages)))
+func (hs *houseService) GetHouses(numberOfHouses, numberOfPages int) ([]*house.House, error) {
+	perPage := int(math.Ceil(float64(numberOfHouses) / float64(numberOfPages)))
 	println(fmt.Sprintf("per page %d", perPage))
 
-	houses, err := hs.HouseRestRepository.GetHouses(perPage, pages)
+	houses, err := hs.HouseRestRepository.GetHousesWithPagination(perPage, numberOfPages)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting houses: %v", err)
