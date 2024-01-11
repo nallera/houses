@@ -17,10 +17,12 @@ func main() {
 
 	houses, err := houseService.GetHouses(13, 2)
 	if err != nil {
-		println(err)
+		println(fmt.Sprintf("error: %+v", err))
 	}
 
-	println(fmt.Sprintf("Houses: %+v", houses))
+	for _, h := range houses {
+		println(fmt.Sprintf("%+v", h))
+	}
 
 	// concurrently download the photos
 }
