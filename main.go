@@ -21,7 +21,7 @@ func main() {
 
 	// request pages concurrently until success
 
-	houses, err := houseService.GetHouses(4, 2)
+	houses, err := houseService.GetHouses(20, 4)
 	if err != nil {
 		println(fmt.Sprintf("error: %+v", err))
 	}

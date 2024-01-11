@@ -82,8 +82,9 @@ func (r *RestRepositoryClient) GetImages(imagesMetadata []*image.Metadata) error
 }
 
 func downloadImage(metadata *image.Metadata) error {
-	urlSplit := strings.Split(metadata.Url, "/")
-	fileName := urlSplit[len(urlSplit)-1]
+	urlSplit := strings.Split(metadata.Url, ".")
+	extension := urlSplit[len(urlSplit)-1]
+	fileName := fmt.Sprintf("%d-%s.%s", metadata.Id, metadata.Address, extension)
 
 	downloadDir := "./" + downloadFolder
 
