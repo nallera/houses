@@ -22,7 +22,6 @@ type houseService struct {
 
 func (hs *houseService) GetHouses(numberOfHouses, numberOfPages int) ([]*house.House, error) {
 	perPage := int(math.Ceil(float64(numberOfHouses) / float64(numberOfPages)))
-	println(fmt.Sprintf("per page %d", perPage))
 
 	houses, err := hs.HouseRestRepository.GetHousesWithPagination(perPage, numberOfPages)
 

@@ -2,24 +2,26 @@ package main
 
 import (
 	"fmt"
-	"houses/internal/house/adapter/repository"
-	"houses/internal/house/app"
+	houserepo "houses/internal/house/adapter/repository"
+	houseapp "houses/internal/house/app"
+	imagerepo "houses/internal/image/adapter/repository"
+	"houses/internal/image/app"
 	"houses/server"
-	"io"
-	"net/http"
-	"os"
-	"strings"
 )
 
 func main() {
-	// instantiate service
-	restClient := server.NewRestClient()
-	houseRepo := repository.NewRestRepositoryClient(restClient)
-	houseService := app.NewHouseService(houseRepo)
+	// instantiate services
+	houseRestClient := server.NewRestClient()
+	houseRepo := houserepo.NewRestRepositoryClient(houseRestClient)
+	houseService := houseapp.NewHouseService(houseRepo)
+
+	imagesRestClient := server.NewRestClient()
+	imageRepo := imagerepo.NewRestRepositoryClient(imagesRestClient)
+	imagesService := app.NewImageService(imageRepo)
 
 	// request pages concurrently until success
 
-	houses, err := houseService.GetHouses(10, 2)
+	houses, err := houseService.GetHouses(4, 2)
 	if err != nil {
 		println(fmt.Sprintf("error: %+v", err))
 	}
@@ -29,13 +31,8 @@ func main() {
 	}
 
 	// concurrently download the photos
-
-	fileUrl := houses[0].PhotoURL
-	urlSplit := strings.Split(fileUrl, "/")
-	fileName := urlSplit[len(urlSplit)-1]
-	out, err := os.Create(fileName)
-	defer out.Close()
-	resp, err := http.Get(fileUrl)
-	defer resp.Body.Close()
-	_, err = io.Copy(out, resp.Body)
+	err = imagesService.DownloadImages(houses)
+	if err != nil {
+		println(fmt.Sprintf("error: %+v", err))
+	}
 }
