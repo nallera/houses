@@ -14,12 +14,12 @@ import (
 var MaxRetries = 5
 var downloadFolder = "images"
 
-type RestRepositoryClient struct {
+type RestRepository struct {
 	restClient server.RestClient
 }
 
-func NewRestRepositoryClient(restClient server.RestClient) *RestRepositoryClient {
-	return &RestRepositoryClient{
+func NewRestRepository(restClient server.RestClient) *RestRepository {
+	return &RestRepository{
 		restClient: restClient,
 	}
 }
@@ -29,7 +29,7 @@ type Result struct {
 	Id  int
 }
 
-func (r *RestRepositoryClient) GetImages(imagesMetadata []*image.Metadata) error {
+func (r *RestRepository) GetImages(imagesMetadata []*image.Metadata) error {
 	numberOfImages := len(imagesMetadata)
 	errChan := make(chan Result, numberOfImages)
 
@@ -91,7 +91,9 @@ func downloadImage(metadata *image.Metadata) error {
 	if _, err := os.Stat(downloadDir); os.IsNotExist(err) {
 		createErr := os.Mkdir(downloadFolder, os.ModePerm)
 		if createErr != nil {
-			return fmt.Errorf("error creating the download directory %s: %v", downloadFolder, createErr)
+			if !os.IsExist(createErr) {
+				return fmt.Errorf("error creating the download directory %s: %v", downloadFolder, createErr)
+			}
 		}
 	}
 

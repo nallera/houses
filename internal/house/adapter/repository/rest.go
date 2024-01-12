@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"houses/internal/house"
 	"houses/server"
+	"math"
 	"sync"
 )
 
@@ -43,12 +44,12 @@ func RestHousesToApp(rh *RestHouses) []*house.House {
 	return houses
 }
 
-type RestRepositoryClient struct {
+type RestRepository struct {
 	restClient server.RestClient
 }
 
-func NewRestRepositoryClient(restClient server.RestClient) *RestRepositoryClient {
-	return &RestRepositoryClient{
+func NewRestRepository(restClient server.RestClient) *RestRepository {
+	return &RestRepository{
 		restClient: restClient,
 	}
 }
@@ -58,7 +59,9 @@ type HousePageResult struct {
 	pageNumber int
 }
 
-func (r *RestRepositoryClient) GetHousesWithPagination(perPage, numberOfPages int) ([]*house.House, error) {
+func (r *RestRepository) GetHousesWithPagination(numberOfHouses, numberOfPages int) ([]*house.House, error) {
+	perPage := int(math.Ceil(float64(numberOfHouses) / float64(numberOfPages)))
+
 	var houses []*house.House
 
 	houseChan := make(chan HousePageResult, numberOfPages)
@@ -116,10 +119,10 @@ func (r *RestRepositoryClient) GetHousesWithPagination(perPage, numberOfPages in
 		houses = append(houses, result...)
 	}
 
-	return houses, nil
+	return houses[:numberOfHouses], nil
 }
 
-func (r *RestRepositoryClient) getSingleHousesPage(perPage, pageNumber int) ([]*house.House, error) {
+func (r *RestRepository) getSingleHousesPage(perPage, pageNumber int) ([]*house.House, error) {
 	url := fmt.Sprintf("%s?page=%d&per_page=%d", HouseBaseURL, pageNumber, perPage)
 
 	println(fmt.Sprintf("request to %s", url))

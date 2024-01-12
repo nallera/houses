@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 	"houses/internal/house"
-	"math"
 )
 
 type HouseService interface {
@@ -21,9 +20,7 @@ type houseService struct {
 }
 
 func (hs *houseService) GetHouses(numberOfHouses, numberOfPages int) ([]*house.House, error) {
-	perPage := int(math.Ceil(float64(numberOfHouses) / float64(numberOfPages)))
-
-	houses, err := hs.HouseRestRepository.GetHousesWithPagination(perPage, numberOfPages)
+	houses, err := hs.HouseRestRepository.GetHousesWithPagination(numberOfHouses, numberOfPages)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting houses: %v", err)
