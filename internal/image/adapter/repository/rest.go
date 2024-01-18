@@ -12,7 +12,7 @@ import (
 )
 
 var MaxRetries = 5
-var downloadFolder = "images"
+var DownloadFolder = "images"
 
 type RestRepository struct {
 	restClient server.RestClient
@@ -25,13 +25,22 @@ func NewRestRepository(restClient server.RestClient) *RestRepository {
 }
 
 type Result struct {
-	err error
 	Id  int
+	err error
 }
 
 func (r *RestRepository) GetImages(imagesMetadata []*image.Metadata) error {
 	numberOfImages := len(imagesMetadata)
 	errChan := make(chan Result, numberOfImages)
+
+	downloadDir := "./" + DownloadFolder
+
+	if _, err := os.Stat(downloadDir); os.IsNotExist(err) {
+		createErr := os.Mkdir(DownloadFolder, os.ModePerm)
+		if createErr != nil {
+			return fmt.Errorf("error creating the download directory %s: %v", DownloadFolder, createErr)
+		}
+	}
 
 	var wg sync.WaitGroup
 
@@ -51,22 +60,22 @@ func (r *RestRepository) GetImages(imagesMetadata []*image.Metadata) error {
 					if retry == MaxRetries {
 						// return the error to communicate the process failed
 						errChan <- Result{
-							err: err,
 							Id:  imageMetadata.Id,
+							err: err,
 						}
 					}
 					continue
 				}
 
 				errChan <- Result{
-					err: nil,
 					Id:  imageMetadata.Id,
+					err: nil,
 				}
-				println(fmt.Sprintf("Successfully saved image for house %d", imageMetadata.Id))
-				break
 			}
 		}(errChan)
 	}
+
+	wg.Wait()
 
 	for in := 0; in < numberOfImages; in++ {
 		result := <-errChan
@@ -85,34 +94,32 @@ func downloadImage(metadata *image.Metadata) error {
 	urlSplit := strings.Split(metadata.Url, ".")
 	extension := urlSplit[len(urlSplit)-1]
 	fileName := fmt.Sprintf("%d-%s.%s", metadata.Id, metadata.Address, extension)
+	fileNameWithPath := DownloadFolder + "/" + fileName
 
-	downloadDir := "./" + downloadFolder
-
-	if _, err := os.Stat(downloadDir); os.IsNotExist(err) {
-		createErr := os.Mkdir(downloadFolder, os.ModePerm)
-		if createErr != nil {
-			if !os.IsExist(createErr) {
-				return fmt.Errorf("error creating the download directory %s: %v", downloadFolder, createErr)
-			}
+	if _, err := os.Stat(fileNameWithPath); os.IsNotExist(err) {
+		resp, err := http.Get(metadata.Url)
+		if err != nil {
+			return fmt.Errorf("error getting the image %s: %v", metadata.Url, err)
 		}
+		defer resp.Body.Close()
+
+		out, err := os.Create(fileNameWithPath)
+		if err != nil {
+			return fmt.Errorf("error creating the file %s: %v", fileName, err)
+		}
+		defer out.Close()
+
+		_, err = io.Copy(out, resp.Body)
+		if err != nil {
+			return fmt.Errorf("error writing the file %s: %v", fileName, err)
+		}
+
+		println(fmt.Sprintf("Successfully saved image for house %d", metadata.Id))
+
+		return nil
 	}
 
-	out, err := os.Create(downloadFolder + "/" + fileName)
-	if err != nil {
-		return fmt.Errorf("error creating the file %s: %v", fileName, err)
-	}
-	defer out.Close()
-
-	resp, err := http.Get(metadata.Url)
-	if err != nil {
-		return fmt.Errorf("error getting the image %s: %v", metadata.Url, err)
-	}
-	defer resp.Body.Close()
-
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return fmt.Errorf("error writing the file %s: %v", fileName, err)
-	}
+	println(fmt.Sprintf("Image for house %d already existed in the download folder", metadata.Id))
 
 	return nil
 }

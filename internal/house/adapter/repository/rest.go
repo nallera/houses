@@ -101,6 +101,8 @@ func (r *RestRepository) GetHousesWithPagination(numberOfHouses, numberOfPages i
 		}(houseChan)
 	}
 
+	wg.Wait()
+
 	results := make([][]*house.House, numberOfPages)
 	for pn := 1; pn <= numberOfPages; pn++ {
 		houseResult := <-houseChan

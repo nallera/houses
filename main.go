@@ -20,8 +20,6 @@ func main() {
 		panic("the number of houses must be greater than the number of pages")
 	}
 
-	println(fmt.Sprintf("nh: %d, np: %d", *numberOfHouses, *numberOfPages))
-
 	// instantiate services
 	houseRestClient := server.NewRestClient()
 	houseRepo := houserepo.NewRestRepository(houseRestClient)
