@@ -100,6 +100,8 @@ func (r *RestRepository) GetHousesWithPagination(numberOfHouses, numberOfPages i
 					}
 					continue
 				}
+
+				break
 			}
 
 			houseChan <- HousePageResult{

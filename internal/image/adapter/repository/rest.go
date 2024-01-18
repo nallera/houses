@@ -72,6 +72,8 @@ func (r *RestRepository) GetImages(imagesMetadata []*image.Metadata) error {
 					}
 					continue
 				}
+
+				break
 			}
 
 			errChan <- Result{
