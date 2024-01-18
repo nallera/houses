@@ -13,6 +13,7 @@ import (
 
 var MaxRetries = 5
 var DownloadFolder = "images"
+var NumberOfWorkers = 5
 
 type RestRepository struct {
 	restClient server.RestClient
@@ -31,7 +32,6 @@ type Result struct {
 
 func (r *RestRepository) GetImages(imagesMetadata []*image.Metadata) error {
 	numberOfImages := len(imagesMetadata)
-	errChan := make(chan Result, numberOfImages)
 
 	downloadDir := "./" + DownloadFolder
 
@@ -43,10 +43,14 @@ func (r *RestRepository) GetImages(imagesMetadata []*image.Metadata) error {
 	}
 
 	var wg sync.WaitGroup
+	jobs := make(chan struct{}, NumberOfWorkers)
+	errChan := make(chan Result, numberOfImages)
 
 	for _, im := range imagesMetadata {
-		wg.Add(1)
 		imageMetadata := im
+		wg.Add(1)
+		// block the calls until the jobs queue has a free slot
+		jobs <- struct{}{}
 
 		go func(errChan chan Result) {
 			defer wg.Done()
@@ -63,15 +67,18 @@ func (r *RestRepository) GetImages(imagesMetadata []*image.Metadata) error {
 							Id:  imageMetadata.Id,
 							err: err,
 						}
+						<-jobs
+						return
 					}
 					continue
 				}
-
-				errChan <- Result{
-					Id:  imageMetadata.Id,
-					err: nil,
-				}
 			}
+
+			errChan <- Result{
+				Id:  imageMetadata.Id,
+				err: nil,
+			}
+			<-jobs
 		}(errChan)
 	}
 

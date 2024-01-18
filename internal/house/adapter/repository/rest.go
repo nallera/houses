@@ -11,6 +11,7 @@ import (
 
 var HouseBaseURL = "http://app-homevision-staging.herokuapp.com/api_project/houses"
 var MaxRetries = 5
+var NumberOfWorkers = 5
 
 type RestHouses struct {
 	Houses []*RestHouse `json:"houses"`
@@ -64,19 +65,26 @@ func (r *RestRepository) GetHousesWithPagination(numberOfHouses, numberOfPages i
 
 	var houses []*house.House
 
-	houseChan := make(chan HousePageResult, numberOfPages)
-
 	var wg sync.WaitGroup
+	houseChan := make(chan HousePageResult, numberOfPages)
+	jobs := make(chan struct{}, NumberOfWorkers)
 
 	for pn := 1; pn <= numberOfPages; pn++ {
-		wg.Add(1)
 		pageNumber := pn
+		wg.Add(1)
+		// block the calls until the jobs queue has a free slot
+		jobs <- struct{}{}
 
 		go func(houseChan chan HousePageResult) {
 			defer wg.Done()
 
+			var (
+				auxHouses []*house.House
+				err       error
+			)
+
 			for retry := 1; retry <= MaxRetries; retry++ {
-				auxHouses, err := r.getSingleHousesPage(perPage, pageNumber)
+				auxHouses, err = r.getSingleHousesPage(perPage, pageNumber)
 
 				// if there's an error, retry as long as possible
 				if err != nil {
@@ -87,17 +95,19 @@ func (r *RestRepository) GetHousesWithPagination(numberOfHouses, numberOfPages i
 							houses:     nil,
 							pageNumber: pageNumber,
 						}
+						<-jobs
+						return
 					}
 					continue
 				}
-
-				houseChan <- HousePageResult{
-					houses:     auxHouses,
-					pageNumber: pageNumber,
-				}
-				println(fmt.Sprintf("Successfully got houses page %d", pageNumber))
-				break
 			}
+
+			houseChan <- HousePageResult{
+				houses:     auxHouses,
+				pageNumber: pageNumber,
+			}
+			println(fmt.Sprintf("Successfully got houses page %d", pageNumber))
+			<-jobs
 		}(houseChan)
 	}
 
